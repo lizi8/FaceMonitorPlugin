@@ -1,0 +1,11 @@
+{
+  "name": "FaceMonitorPlugin",
+  "id": "FaceMonitorPlugin",
+  "version": "1.0.0",
+  "description": "人脸检测插件",
+  "platforms": ["iOS"],
+  "ios": {
+    "frameworks": ["DCUniBase.framework"],  // 根据实际依赖填写
+    "resources": []
+  }
+}

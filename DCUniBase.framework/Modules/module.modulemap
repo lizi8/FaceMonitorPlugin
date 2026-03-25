@@ -1,0 +1,6 @@
+framework module DCUniBase {
+  umbrella header "DCUniBase.h"
+  export *
+
+  module * { export * }
+}
