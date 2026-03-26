@@ -27,8 +27,6 @@ jobs:
           PROJECT="${GITHUB_WORKSPACE}/FaceMonitorPlugin/FaceMonitorPlugin.xcodeproj"
           TARGET="FaceMonitorPlugin"
 
-          DERIVED_DATA="${BUILD_DIR}/DerivedData"
-
           rm -rf "${BUILD_DIR}"
           mkdir -p "${BUILD_DIR}"
 
@@ -43,10 +41,11 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            -derivedDataPath "${DERIVED_DATA}" \
             build
 
-          IOS_FRAMEWORK_SRC="${DERIVED_DATA}/Build/Products/Release-iphoneos/FaceMonitorPlugin.framework"
+          # 从构建设置中读取输出目录，避免依赖 derivedDataPath
+          IOS_BUILT_PRODUCTS_DIR="$(xcodebuild -project "${PROJECT}" -target "${TARGET}" -configuration Release -sdk iphoneos -showBuildSettings | rg -m1 '^BUILT_PRODUCTS_DIR\\s*=\\s*' | sed 's/.*=\\s*//')"
+          IOS_FRAMEWORK_SRC="${IOS_BUILT_PRODUCTS_DIR}/FaceMonitorPlugin.framework"
           echo "=== Prepare FaceDetection.framework (for UniApp) ==="
           ditto "${IOS_FRAMEWORK_SRC}" "${BUILD_DIR}/FaceDetection.framework"
 
@@ -62,10 +61,10 @@ jobs:
               CODE_SIGNING_ALLOWED=NO \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
-              -derivedDataPath "${DERIVED_DATA}" \
               build
 
-            SIM_FRAMEWORK_SRC="${DERIVED_DATA}/Build/Products/Release-iphonesimulator/FaceMonitorPlugin.framework"
+            SIM_BUILT_PRODUCTS_DIR="$(xcodebuild -project "${PROJECT}" -target "${TARGET}" -configuration Release -sdk iphonesimulator -showBuildSettings | rg -m1 '^BUILT_PRODUCTS_DIR\\s*=\\s*' | sed 's/.*=\\s*//')"
+            SIM_FRAMEWORK_SRC="${SIM_BUILT_PRODUCTS_DIR}/FaceMonitorPlugin.framework"
 
             echo "=== Create FaceDetection.xcframework ==="
             # 注意：xcframework 的框架内部实际来自 FaceMonitorPlugin.framework，但最终输出命名为 FaceDetection.xcframework
