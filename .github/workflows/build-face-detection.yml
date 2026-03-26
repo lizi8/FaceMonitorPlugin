@@ -1,0 +1,94 @@
+name: Build FaceDetection Framework / XCFramework
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_xcframework:
+        description: "Also build simulator slice and create FaceDetection.xcframework"
+        required: false
+        default: "true"
+
+jobs:
+  build:
+    runs-on: macos-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Build FaceDetection.framework (+ optional .xcframework)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD_DIR="${GITHUB_WORKSPACE}/build"
+          PROJECT="${GITHUB_WORKSPACE}/FaceMonitorPlugin.xcodeproj"
+          SCHEME="FaceMonitorPlugin"
+
+          IOS_ARCHIVE="${BUILD_DIR}/FaceMonitorPlugin-ios.xcarchive"
+          SIM_ARCHIVE="${BUILD_DIR}/FaceMonitorPlugin-sim.xcarchive"
+
+          rm -rf "${BUILD_DIR}"
+          mkdir -p "${BUILD_DIR}"
+
+          echo "=== Build device (iphoneos) ==="
+          xcodebuild \
+            -project "${PROJECT}" \
+            -scheme "${SCHEME}" \
+            -configuration Release \
+            -sdk iphoneos \
+            archive \
+            -archivePath "${IOS_ARCHIVE}" \
+            SKIP_INSTALL=NO \
+            BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+          IOS_FRAMEWORK_SRC="${IOS_ARCHIVE}/Products/Library/Frameworks/FaceMonitorPlugin.framework"
+          echo "=== Prepare FaceDetection.framework (for UniApp) ==="
+          ditto "${IOS_FRAMEWORK_SRC}" "${BUILD_DIR}/FaceDetection.framework"
+
+          if [ "${{ inputs.build_xcframework }}" = "true" ]; then
+            echo "=== Build simulator (iphonesimulator) ==="
+            xcodebuild \
+              -project "${PROJECT}" \
+              -scheme "${SCHEME}" \
+              -configuration Release \
+              -sdk iphonesimulator \
+              archive \
+              -archivePath "${SIM_ARCHIVE}" \
+              SKIP_INSTALL=NO \
+              BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
+              ONLY_ACTIVE_ARCH=NO \
+              CODE_SIGNING_ALLOWED=NO
+
+            SIM_FRAMEWORK_SRC="${SIM_ARCHIVE}/Products/Library/Frameworks/FaceMonitorPlugin.framework"
+
+            echo "=== Create FaceDetection.xcframework ==="
+            # 注意：xcframework 的框架内部实际来自 FaceMonitorPlugin.framework，但最终输出命名为 FaceDetection.xcframework
+            ditto "${IOS_FRAMEWORK_SRC}" "${BUILD_DIR}/FaceDetection-ios.framework"
+            ditto "${SIM_FRAMEWORK_SRC}" "${BUILD_DIR}/FaceDetection-sim.framework"
+
+            xcodebuild -create-xcframework \
+              -framework "${BUILD_DIR}/FaceDetection-ios.framework" \
+              -framework "${BUILD_DIR}/FaceDetection-sim.framework" \
+              -output "${BUILD_DIR}/FaceDetection.xcframework"
+          else
+            echo "Skip xcframework creation (build_xcframework=false)"
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FaceDetection-artifacts
+          path: |
+            build/FaceDetection.framework
+
+      - name: Upload xcframework artifact
+        if: ${{ inputs.build_xcframework == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: FaceDetection-xcframework
+          path: build/FaceDetection.xcframework
+
