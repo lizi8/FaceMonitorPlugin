@@ -43,8 +43,12 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
 
-          # 从构建设置中读取输出目录，避免依赖 derivedDataPath
-          IOS_BUILT_PRODUCTS_DIR="$(xcodebuild -project "${PROJECT}" -target "${TARGET}" -configuration Release -sdk iphoneos -showBuildSettings | rg -m1 '^BUILT_PRODUCTS_DIR\\s*=\\s*' | sed 's/.*=\\s*//')"
+          # 从构建设置中读取输出目录，避免依赖 derivedDataPath（runner 上不一定有 rg）
+          IOS_BUILT_PRODUCTS_DIR="$(xcodebuild -project "${PROJECT}" -target "${TARGET}" -configuration Release -sdk iphoneos -showBuildSettings | awk -F= '/BUILT_PRODUCTS_DIR/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}')"
+          if [ -z "${IOS_BUILT_PRODUCTS_DIR}" ]; then
+            echo "Failed to parse BUILT_PRODUCTS_DIR for iphoneos"
+            exit 1
+          fi
           IOS_FRAMEWORK_SRC="${IOS_BUILT_PRODUCTS_DIR}/FaceMonitorPlugin.framework"
           echo "=== Prepare FaceDetection.framework (for UniApp) ==="
           ditto "${IOS_FRAMEWORK_SRC}" "${BUILD_DIR}/FaceDetection.framework"
@@ -63,7 +67,11 @@ jobs:
               CODE_SIGNING_REQUIRED=NO \
               build
 
-            SIM_BUILT_PRODUCTS_DIR="$(xcodebuild -project "${PROJECT}" -target "${TARGET}" -configuration Release -sdk iphonesimulator -showBuildSettings | rg -m1 '^BUILT_PRODUCTS_DIR\\s*=\\s*' | sed 's/.*=\\s*//')"
+            SIM_BUILT_PRODUCTS_DIR="$(xcodebuild -project "${PROJECT}" -target "${TARGET}" -configuration Release -sdk iphonesimulator -showBuildSettings | awk -F= '/BUILT_PRODUCTS_DIR/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}')"
+            if [ -z "${SIM_BUILT_PRODUCTS_DIR}" ]; then
+              echo "Failed to parse BUILT_PRODUCTS_DIR for iphonesimulator"
+              exit 1
+            fi
             SIM_FRAMEWORK_SRC="${SIM_BUILT_PRODUCTS_DIR}/FaceMonitorPlugin.framework"
 
             echo "=== Create FaceDetection.xcframework ==="
