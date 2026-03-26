@@ -23,8 +23,9 @@ jobs:
           set -euo pipefail
 
           BUILD_DIR="${GITHUB_WORKSPACE}/build"
-          PROJECT="${GITHUB_WORKSPACE}/FaceMonitorPlugin.xcodeproj"
-          SCHEME="FaceMonitorPlugin"
+          # 使用仓库内的实际工程（避免选错上层/下层 xcodeproj 导致 scheme/target 不匹配）
+          PROJECT="${GITHUB_WORKSPACE}/FaceMonitorPlugin/FaceMonitorPlugin.xcodeproj"
+          TARGET="FaceMonitorPlugin"
 
           IOS_ARCHIVE="${BUILD_DIR}/FaceMonitorPlugin-ios.xcarchive"
           SIM_ARCHIVE="${BUILD_DIR}/FaceMonitorPlugin-sim.xcarchive"
@@ -35,15 +36,17 @@ jobs:
           echo "=== Build device (iphoneos) ==="
           xcodebuild \
             -project "${PROJECT}" \
-            -scheme "${SCHEME}" \
             -configuration Release \
             -sdk iphoneos \
+            -target "${TARGET}" \
             archive \
             -archivePath "${IOS_ARCHIVE}" \
             SKIP_INSTALL=NO \
             BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
             ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
 
           IOS_FRAMEWORK_SRC="${IOS_ARCHIVE}/Products/Library/Frameworks/FaceMonitorPlugin.framework"
           echo "=== Prepare FaceDetection.framework (for UniApp) ==="
@@ -53,15 +56,17 @@ jobs:
             echo "=== Build simulator (iphonesimulator) ==="
             xcodebuild \
               -project "${PROJECT}" \
-              -scheme "${SCHEME}" \
               -configuration Release \
               -sdk iphonesimulator \
+              -target "${TARGET}" \
               archive \
               -archivePath "${SIM_ARCHIVE}" \
               SKIP_INSTALL=NO \
               BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
               ONLY_ACTIVE_ARCH=NO \
-              CODE_SIGNING_ALLOWED=NO
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO
 
             SIM_FRAMEWORK_SRC="${SIM_ARCHIVE}/Products/Library/Frameworks/FaceMonitorPlugin.framework"
 
