@@ -75,13 +75,10 @@ jobs:
             SIM_FRAMEWORK_SRC="${SIM_BUILT_PRODUCTS_DIR}/FaceMonitorPlugin.framework"
 
             echo "=== Create FaceDetection.xcframework ==="
-            # 注意：xcframework 的框架内部实际来自 FaceMonitorPlugin.framework，但最终输出命名为 FaceDetection.xcframework
-            ditto "${IOS_FRAMEWORK_SRC}" "${BUILD_DIR}/FaceDetection-ios.framework"
-            ditto "${SIM_FRAMEWORK_SRC}" "${BUILD_DIR}/FaceDetection-sim.framework"
-
+            # 直接用原始 framework 作为输入，避免重命名 framework 目录后内部二进制名称不一致导致找不到可执行文件
             xcodebuild -create-xcframework \
-              -framework "${BUILD_DIR}/FaceDetection-ios.framework" \
-              -framework "${BUILD_DIR}/FaceDetection-sim.framework" \
+              -framework "${IOS_FRAMEWORK_SRC}" \
+              -framework "${SIM_FRAMEWORK_SRC}" \
               -output "${BUILD_DIR}/FaceDetection.xcframework"
           else
             echo "Skip xcframework creation (build_xcframework=false)"
